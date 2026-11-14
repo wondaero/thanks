@@ -45,7 +45,7 @@ export function useAdmin(authReady: boolean) {
     return data as VerifyResult
   }, [])
 
-  /** 비밀번호가 무효해졌을 때(날짜가 바뀐 경우 등) 관리자 모드를 내리고 입력창으로 */
+  /** 비밀번호가 무효해졌을 때(관리자가 비밀번호를 바꾼 경우 등) 관리자 모드를 내리고 입력창으로 */
   const expire = useCallback((msg: string) => {
     sessionStorage.removeItem(KEY)
     setSecret(null)
@@ -61,7 +61,7 @@ export function useAdmin(authReady: boolean) {
       .then((r) => {
         if (cancelled) return
         if (r === 'ok') setStatus('ok')
-        else expire('비밀번호가 만료되었습니다. 다시 입력하세요.')
+        else expire('비밀번호가 변경되었습니다. 다시 입력하세요.')
       })
       .catch((e) => !cancelled && expire(e.message))
     return () => {
@@ -107,8 +107,8 @@ export function useAdmin(authReady: boolean) {
       })
       if (error) throw new Error(error.message)
       if (data === null) {
-        // 자정이 지나 비밀번호(날짜)가 바뀐 경우
-        expire('비밀번호가 만료되었습니다. 다시 입력하세요.')
+        // 그 사이 비밀번호가 변경된 경우
+        expire('비밀번호가 변경되었습니다. 다시 입력하세요.')
         throw new Error('삭제하지 못했습니다. 비밀번호를 다시 입력하세요.')
       }
       return data as number

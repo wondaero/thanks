@@ -24,7 +24,6 @@ export function AdminLogin({ checking, disabled, notice, onSubmit, onCancel }: P
         <h2 id="admin-login-title">관리자 로그인</h2>
         <input
           type="password"
-          inputMode="numeric"
           autoComplete="off"
           placeholder="비밀번호"
           value={pw}

@@ -20,12 +20,19 @@ npm run dev
 
 ## 관리자 모드
 `https://<주소>/?admin`으로 접속하면 비밀번호 입력창이 뜹니다.
-- 비밀번호는 서버(DB 함수)에서 매일 바뀌는 규칙으로 검증됨
+- 비밀번호는 고정값. DB(`private.admin_secret`)에 bcrypt 해시로만 저장되고 저장소에는 없음
 - `?admin` 파라미터는 URL에서 즉시 제거됨. 값을 붙여도(`?admin=...`) 무시함
-- 통과하면 탭 세션 동안 유지되고, 날짜가 바뀌면 다음 동작 시 다시 입력창이 뜸
+- 통과하면 탭 세션 동안 유지됨
 - 글을 클릭하거나 체크박스로 여러 개 선택한 뒤 **선택 삭제**. 다른 접속자 화면에서도 실시간으로 사라짐
 - 권한 검사는 전부 DB 함수(`admin_verify`, `admin_delete_messages`)에서 수행
 - 잠금: 같은 IP에서 15분 내 5회 실패, 또는 전체 1시간 내 50회 실패하면 잠김
+
+비밀번호 설정/변경 (Supabase 대시보드 > SQL Editor):
+```sql
+insert into private.admin_secret (hash)
+values (extensions.crypt('<비밀번호>', extensions.gen_salt('bf', 10)))
+on conflict (id) do update set hash = excluded.hash;
+```
 
 잠금 즉시 해제:
 ```bash
