@@ -20,19 +20,12 @@ npm run dev
 
 ## 관리자 모드
 `https://<주소>/?admin`으로 접속하면 비밀번호 입력창이 뜹니다.
-- 비밀번호는 고정값. DB(`private.admin_secret`)에 bcrypt 해시로만 저장되고 저장소에는 없음
+- 비밀번호: 아무 값이나 **정확히 3글자**면 통과 (서버 DB 함수에서 길이만 검사)
 - `?admin` 파라미터는 URL에서 즉시 제거됨. 값을 붙여도(`?admin=...`) 무시함
 - 통과하면 탭 세션 동안 유지됨
 - 글을 클릭하거나 체크박스로 여러 개 선택한 뒤 **선택 삭제**. 다른 접속자 화면에서도 실시간으로 사라짐
 - 권한 검사는 전부 DB 함수(`admin_verify`, `admin_delete_messages`)에서 수행
 - 잠금: 같은 IP에서 15분 내 5회 실패, 또는 전체 1시간 내 50회 실패하면 잠김
-
-비밀번호 설정/변경 (Supabase 대시보드 > SQL Editor):
-```sql
-insert into private.admin_secret (hash)
-values (extensions.crypt('<비밀번호>', extensions.gen_salt('bf', 10)))
-on conflict (id) do update set hash = excluded.hash;
-```
 
 잠금 즉시 해제:
 ```bash
@@ -57,3 +50,4 @@ DB 스키마와 Auth 설정은 대시보드가 아니라 코드로 관리합니�
 - 메시지의 `user_id`는 DB가 `auth.uid()`로 채우고, RLS가 `user_id = auth.uid()`만 INSERT 허용 → 남의 이름표로 위장 불가
 - 새로고침: 세션 유지 → 내 글 그대로 오른쪽
 - 탭/브라우저를 닫고 재접속: 새 익명 사용자 → 이전 글은 왼쪽(남의 글)
+- 세션이 살아있는 동안은 내 글 옆 **삭제** 버튼으로 직접 삭제 가능 (RLS `messages_delete_own`). 세션이 바뀌면 삭제 불가

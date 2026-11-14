@@ -185,3 +185,15 @@ body { background: var(--bg); color: var(--text); }
 }
 .modal__actions button.primary { background: var(--mine); border-color: var(--mine); color: #fff; }
 .modal__actions button:disabled { opacity: 0.5; cursor: default; }
+
+/* 본인 글 삭제 */
+.msg__delete {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.msg__delete:hover { color: #ef4444; text-decoration: underline; }

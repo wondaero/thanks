@@ -227,6 +227,16 @@ export default function App() {
     }
   }
 
+  /** 본인 글 삭제. 권한은 RLS(messages_delete_own)가 검사 */
+  const onDeleteOwn = async (id: number) => {
+    if (!window.confirm('이 글을 삭제할까요?')) return
+    setError(null)
+    const { data, error } = await supabase.from('messages').delete().eq('id', id).select('id')
+    if (error) setError(error.message)
+    else if (!data || data.length === 0) setError('삭제할 수 없는 글입니다.') // 세션이 바뀐 경우 등
+    else removeIds([id])
+  }
+
   const exitAdmin = () => {
     setSelected(new Set())
     admin.exit()
@@ -301,6 +311,11 @@ export default function App() {
                 )}
                 <strong>{m.name}</strong>
                 <time dateTime={m.created_at}>{fmt.format(new Date(m.created_at))}</time>
+                {mine && !admin.isAdmin && (
+                  <button type="button" className="msg__delete" onClick={() => onDeleteOwn(m.id)}>
+                    삭제
+                  </button>
+                )}
               </div>
               <div className="bubble">{m.content}</div>
             </div>
