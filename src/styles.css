@@ -1,24 +1,40 @@
+/* ── 색상 토큰 ────────────────────────────────────────
+ * 1) 원색(palette): 브랜드 색 원본. 직접 쓰지 말고 아래 역할 토큰을 통해 사용
+ * 2) 역할(role): 컴포넌트는 이것만 참조 → 톤 변경은 --accent 한 줄로 끝남
+ */
 :root {
-  --bg: #f4f5f7;
+  --palette-olive: #a6a15e;
+  --palette-clay: #c69f89;
+
+  --accent: var(--palette-clay);
+  /* 강조색 위 글자색: 두 톤 모두 흰색 (디자인 결정. 대비 clay 2.41:1, olive 2.66:1) */
+  --on-accent: #ffffff;
+
+  /* 배경·테두리에 강조색을 살짝 섞어 전체 톤을 맞춤 */
+  --bg: color-mix(in srgb, var(--accent) 10%, #f7f7f5);
   --panel: #ffffff;
   --text: #1c1e21;
-  --muted: #6b7280;
-  --border: #e5e7eb;
+  --muted: #6b6b63;
+  --border: color-mix(in srgb, var(--accent) 22%, #e7e7e3);
   --other: #ffffff;
-  --mine: #3b82f6;
-  --mine-text: #ffffff;
+
+  --danger: #dc2626;
+  --success: #22c55e;
+
   font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
   color-scheme: light dark;
 }
+/* 사용자가 고른 톤: <html data-tone="olive">. 속성이 없으면 기본값(clay) */
+:root[data-tone='olive'] { --accent: var(--palette-olive); }
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111318;
-    --panel: #1a1d23;
-    --text: #e6e8eb;
-    --muted: #9aa1ac;
-    --border: #2a2e36;
-    --other: #252932;
-    --mine: #2563eb;
+    --bg: color-mix(in srgb, var(--accent) 6%, #121311);
+    --panel: color-mix(in srgb, var(--accent) 4%, #1a1b18);
+    --text: #e8e7e1;
+    --muted: #a3a29a;
+    --border: color-mix(in srgb, var(--accent) 18%, #2b2c28);
+    --other: color-mix(in srgb, var(--accent) 6%, #24251f);
   }
 }
 
@@ -43,10 +59,14 @@ body { background: var(--bg); color: var(--text); }
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
-.header h1 { font-size: 18px; margin: 0; }
+.header { gap: 8px; }
+/* 좁은 화면에서 제목이 길면 말줄임 처리 (테마 버튼·상태 표시가 밀려나지 않게) */
+.header h1 { font-size: 18px; margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header .status { flex-shrink: 0; }
+.tone-switcher { flex-shrink: 0; }
 .status { font-size: 12px; color: var(--muted); }
-.status--live::before { content: '● '; color: #22c55e; }
-.status--error { color: #ef4444; }
+.status--live::before { content: '● '; color: var(--success); }
+.status--error { color: var(--danger); }
 
 .list {
   flex: 1;
@@ -74,16 +94,20 @@ body { background: var(--bg); color: var(--text); }
   word-break: break-word;
   line-height: 1.45;
 }
-.msg--mine .bubble { background: var(--mine); color: var(--mine-text); border-color: transparent; }
+.msg--mine .bubble { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 
 .composer {
+  /* 입력 줄의 기준 높이. 이름·내용·버튼이 모두 이 값을 공유해 위아래 선이 맞음 */
+  --composer-h: 56px;
   display: flex;
+  align-items: flex-end;  /* 내용이 길어져 textarea가 커져도 아래 선은 유지 */
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
 }
-.composer input {
-  padding: 10px 12px;
+.composer input,
+.composer textarea {
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
@@ -91,24 +115,41 @@ body { background: var(--bg); color: var(--text); }
   font: inherit;
   min-width: 0;
 }
-.composer .name { width: 140px; flex-shrink: 0; }
-.composer .content { flex: 1; }
+.composer .name {
+  width: 150px;
+  height: var(--composer-h);
+  flex-shrink: 0;
+}
+/* 칸이 좁아 placeholder가 잘리지 않도록 작게 */
+.composer .name::placeholder { font-size: 13px; }
+.composer .content {
+  flex: 1;
+  min-height: var(--composer-h);
+  max-height: 160px;  /* 이 이상은 내부 스크롤 */
+  padding-block: 16px; /* (56 - 1줄 높이 23 - 테두리 2) / 2 ≈ 16 → 한 줄일 때 세로 가운데 */
+  resize: none;
+  overflow-y: auto;
+  line-height: 1.45;
+}
 .composer button {
+  height: var(--composer-h);
+  flex-shrink: 0;
   padding: 0 18px;
   border: 0;
   border-radius: 8px;
-  background: var(--mine);
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
   font: inherit;
   cursor: pointer;
 }
 .composer button:disabled { opacity: 0.5; cursor: default; }
 
-.error { margin: 0; padding: 0 16px 12px; color: #ef4444; font-size: 13px; }
+.error { margin: 0; padding: 0 16px 12px; color: var(--danger); font-size: 13px; }
 
 @media (max-width: 480px) {
-  .composer { flex-wrap: wrap; }
+  .composer { flex-wrap: wrap; --composer-h: 48px; }
   .composer .name { width: 100%; }
+  .composer .content { padding-block: 12px; }
 }
 
 /* 무한 스크롤 상태 표시 */
@@ -122,7 +163,7 @@ body { background: var(--bg); color: var(--text); }
   flex-wrap: wrap;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, #ef4444 8%, var(--panel));
+  background: color-mix(in srgb, var(--danger) 8%, var(--panel));
   font-size: 13px;
 }
 .adminbar__count { color: var(--muted); }
@@ -136,12 +177,12 @@ body { background: var(--bg); color: var(--text); }
   font: inherit;
   cursor: pointer;
 }
-.adminbar button.danger { background: #ef4444; border-color: #ef4444; color: #fff; }
+.adminbar button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .adminbar button:disabled { opacity: 0.5; cursor: default; }
 
 .msg--selectable { cursor: pointer; user-select: none; }
-.msg--selected .bubble { outline: 2px solid #ef4444; outline-offset: 2px; }
-.meta input[type='checkbox'] { margin: 0; accent-color: #ef4444; }
+.msg--selected .bubble { outline: 2px solid var(--danger); outline-offset: 2px; }
+.meta input[type='checkbox'] { margin: 0; accent-color: var(--danger); }
 
 /* 관리자 인증 실패 등 안내 */
 .notice {
@@ -152,7 +193,7 @@ body { background: var(--bg); color: var(--text); }
   margin: 0;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
-  color: #ef4444;
+  color: var(--danger);
   font-size: 13px;
 }
 .notice button {
@@ -173,4 +214,22 @@ body { background: var(--bg); color: var(--text); }
   font-size: 12px;
   cursor: pointer;
 }
-.msg__delete:hover { color: #ef4444; text-decoration: underline; }
+.msg__delete:hover { color: var(--danger); text-decoration: underline; }
+
+/* 톤 선택 */
+.tone-switcher { display: flex; gap: 4px; margin-left: auto; margin-right: 12px; }
+.tone-switcher button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tone-switcher button.is-active { color: var(--text); border-color: var(--accent); }
+.tone-switcher__swatch { width: 10px; height: 10px; border-radius: 50%; }

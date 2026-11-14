@@ -1,11 +1,23 @@
-import { FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  FormEvent,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { ensureAnonUser, supabase, type Message } from './supabase'
 import { useAdmin } from './admin'
+import { ToneSwitcher } from './ToneSwitcher'
 
 const PAGE_SIZE = 50
 /** 맨 위에서 이 거리(px) 안으로 들어오면 이전 글을 미리 불러옴 */
 const LOAD_THRESHOLD = 200
 const NAME_KEY = 'chat:name'
+/** 터치 기기(휴대폰·태블릿) 여부. 가상 키보드의 Enter는 줄바꿈으로 둠 */
+const isCoarsePointer =
+  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 const fmt = new Intl.DateTimeFormat('ko-KR', {
   year: 'numeric',
@@ -50,6 +62,7 @@ export default function App() {
   const [deleting, setDeleting] = useState(false)
 
   const listRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLTextAreaElement>(null)
   const stickToBottom = useRef(true)
   /** 이전 글을 앞에 붙이기 직전의 스크롤 상태. 붙인 뒤 보던 위치를 그대로 유지하는 데 사용 */
   const prependAnchor = useRef<{ height: number; top: number } | null>(null)
@@ -174,6 +187,23 @@ export default function App() {
     if (initialLoaded.current && el.scrollTop < LOAD_THRESHOLD) void loadOlder()
   }
 
+  // 내용 입력란 높이 자동 조절 (min/max-height는 CSS에서 제한)
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight + (el.offsetHeight - el.clientHeight)}px`
+  }, [content])
+
+  /** PC: Enter 등록 / Shift+Enter 줄바꿈. 터치 기기: Enter는 줄바꿈, 등록은 버튼 */
+  const onContentKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey || isCoarsePointer) return
+    // 한글 조합 중 Enter는 조합 확정용 → 여기서 등록하면 중복 전송됨
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
+    e.preventDefault()
+    e.currentTarget.form?.requestSubmit()
+  }
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const text = content.trim()
@@ -244,7 +274,8 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>One Room</h1>
+        <h1>Thessalonians 5:18</h1>
+        <ToneSwitcher />
         <span className={`status status--${status}`}>
           {status === 'live' ? '연결됨' : status === 'connecting' ? '연결 중…' : '연결 오류'}
         </span>
@@ -329,12 +360,15 @@ export default function App() {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <input
+        <textarea
+          ref={contentRef}
           className="content"
-          placeholder="내용을 입력하세요"
+          placeholder={isCoarsePointer ? '내용을 입력하세요' : '내용을 입력하세요 (Shift+Enter 줄바꿈)'}
           maxLength={500}
+          rows={1}
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          onKeyDown={onContentKeyDown}
           autoFocus
         />
         <button type="submit" disabled={!content.trim() || sending || !myId}>

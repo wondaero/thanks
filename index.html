@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>One Room Chat</title>
+    <title>Thessalonians 5:18</title>
+    <script>
+      // 저장된 톤을 첫 렌더 전에 적용 (React 마운트 후 적용하면 기본색이 잠깐 보이는 깜빡임 발생)
+      try {
+        var t = localStorage.getItem('chat:tone')
+        if (t === 'clay' || t === 'olive') document.documentElement.dataset.tone = t
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
