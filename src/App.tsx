@@ -15,6 +15,7 @@ const PAGE_SIZE = 50
 /** 맨 위에서 이 거리(px) 안으로 들어오면 이전 글을 미리 불러옴 */
 const LOAD_THRESHOLD = 200
 const NAME_KEY = 'chat:name'
+const STATUS_LABEL = { connecting: '연결 중', live: '연결됨', error: '연결 오류' } as const
 /** 터치 기기(휴대폰·태블릿) 여부. 가상 키보드의 Enter는 줄바꿈으로 둠 */
 const isCoarsePointer =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -276,9 +277,13 @@ export default function App() {
       <header className="header">
         <h1>Thessalonians 5:18</h1>
         <ToneSwitcher />
-        <span className={`status status--${status}`}>
-          {status === 'live' ? '연결됨' : status === 'connecting' ? '연결 중…' : '연결 오류'}
-        </span>
+        {/* 램프만 표시. 상태 문구는 툴팁·스크린리더용으로만 제공 */}
+        <span
+          className={`status status--${status}`}
+          role="status"
+          aria-label={STATUS_LABEL[status]}
+          title={STATUS_LABEL[status]}
+        />
       </header>
 
       {admin.isAdmin && (

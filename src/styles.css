@@ -64,9 +64,20 @@ body { background: var(--bg); color: var(--text); }
 .header h1 { font-size: 18px; margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .header .status { flex-shrink: 0; }
 .tone-switcher { flex-shrink: 0; }
-.status { font-size: 12px; color: var(--muted); }
-.status--live::before { content: '● '; color: var(--success); }
-.status--error { color: var(--danger); }
+/* 연결 상태 램프 */
+.status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.status--live { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 25%, transparent); }
+.status--error { background: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 25%, transparent); }
+.status--connecting { animation: status-blink 1s ease-in-out infinite; }
+@keyframes status-blink { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) {
+  .status--connecting { animation: none; }
+}
 
 .list {
   flex: 1;
