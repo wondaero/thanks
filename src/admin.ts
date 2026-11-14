@@ -5,26 +5,35 @@ const KEY = 'chat:admin'
 
 /**
  * none     : 일반 사용자
- * prompt   : 비밀번호 입력창 표시 중
- * submitting : 입력한 비밀번호 서버 확인 중 (입력창 유지)
- * checking : 새로고침 후 저장된 비밀번호 재확인 중 (입력창 없음)
+ * checking : 서버 확인 중
  * ok       : 관리자
  */
-export type AdminStatus = 'none' | 'prompt' | 'submitting' | 'checking' | 'ok'
+export type AdminStatus = 'none' | 'checking' | 'ok'
 type VerifyResult = 'ok' | 'invalid' | 'locked'
 
-/** `?admin`이 있으면 입력창을 띄울 대상. 값이 붙어 있어도 쓰지 않고 URL에서 제거 */
-function takeAdminFlagFromUrl(): boolean {
-  const url = new URL(window.location.href)
-  if (!url.searchParams.has('admin')) return false
-  url.searchParams.delete('admin')
-  window.history.replaceState(null, '', url.pathname + url.search + url.hash)
-  return true
+const MESSAGES: Record<Exclude<VerifyResult, 'ok'>, string> = {
+  invalid: '관리자 인증에 실패했습니다.',
+  locked: '시도 횟수를 초과했습니다. 잠시 후 다시 시도하세요.',
 }
 
-const MESSAGES: Record<Exclude<VerifyResult, 'ok'>, string> = {
-  invalid: '비밀번호가 올바르지 않습니다.',
-  locked: '시도 횟수를 초과했습니다. 잠시 후 다시 시도하세요.',
+/**
+ * `?admin=<값>`에서 값을 꺼내고 URL에서는 즉시 제거
+ * (관리자 주소가 주소창에 남아 그대로 공유되는 실수 방지).
+ * 값이 없으면 같은 탭에서 이전에 통과한 값을 사용.
+ */
+// URL은 한 번 읽으면 지워지므로 결과를 모듈에 보관 (StrictMode의 초기화 함수 이중 호출 대비)
+let urlSecret: string | null | undefined
+
+function takeSecret(): string | null {
+  if (urlSecret === undefined) {
+    const url = new URL(window.location.href)
+    urlSecret = url.searchParams.get('admin') || null
+    if (url.searchParams.has('admin')) {
+      url.searchParams.delete('admin')
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+    }
+  }
+  return urlSecret ?? sessionStorage.getItem(KEY)
 }
 
 /**
@@ -32,71 +41,44 @@ const MESSAGES: Record<Exclude<VerifyResult, 'ok'>, string> = {
  * 클라이언트의 status는 UI 표시용일 뿐, 우회해도 삭제는 불가능.
  */
 export function useAdmin(authReady: boolean) {
-  const [wantsAdmin] = useState(takeAdminFlagFromUrl)
-  const [secret, setSecret] = useState<string | null>(() => sessionStorage.getItem(KEY))
-  const [status, setStatus] = useState<AdminStatus>(() =>
-    sessionStorage.getItem(KEY) ? 'checking' : wantsAdmin ? 'prompt' : 'none',
-  )
+  const [secret, setSecret] = useState<string | null>(takeSecret)
+  const [status, setStatus] = useState<AdminStatus>(() => (secret ? 'checking' : 'none'))
   const [notice, setNotice] = useState<string | null>(null)
 
-  const verify = useCallback(async (pw: string): Promise<VerifyResult> => {
-    const { data, error } = await supabase.rpc('admin_verify', { p_secret: pw })
-    if (error) throw new Error(error.message)
-    return data as VerifyResult
-  }, [])
-
-  /** 비밀번호가 무효해졌을 때(관리자가 비밀번호를 바꾼 경우 등) 관리자 모드를 내리고 입력창으로 */
-  const expire = useCallback((msg: string) => {
+  const fail = useCallback((msg: string) => {
     sessionStorage.removeItem(KEY)
     setSecret(null)
+    setStatus('none')
     setNotice(msg)
-    setStatus('prompt')
   }, [])
 
-  // 같은 탭에서 새로고침한 경우: 저장된 비밀번호가 아직 유효한지 서버에 재확인
   useEffect(() => {
     if (!authReady || status !== 'checking' || !secret) return
     let cancelled = false
-    verify(secret)
-      .then((r) => {
-        if (cancelled) return
-        if (r === 'ok') setStatus('ok')
-        else expire('비밀번호가 변경되었습니다. 다시 입력하세요.')
-      })
-      .catch((e) => !cancelled && expire(e.message))
+    supabase.rpc('admin_verify', { p_secret: secret }).then(({ data, error }) => {
+      if (cancelled) return
+      if (error) return fail(error.message)
+      const r = data as VerifyResult
+      if (r === 'ok') {
+        sessionStorage.setItem(KEY, secret)
+        setStatus('ok')
+      } else {
+        fail(MESSAGES[r])
+      }
+    })
     return () => {
       cancelled = true
     }
-  }, [authReady, status, secret, verify, expire])
-
-  const submit = useCallback(
-    async (pw: string) => {
-      setStatus('submitting')
-      setNotice(null)
-      try {
-        const r = await verify(pw)
-        if (r === 'ok') {
-          sessionStorage.setItem(KEY, pw)
-          setSecret(pw)
-          setStatus('ok')
-        } else {
-          setNotice(MESSAGES[r])
-          setStatus('prompt')
-        }
-      } catch (e) {
-        setNotice(e instanceof Error ? e.message : String(e))
-        setStatus('prompt')
-      }
-    },
-    [verify],
-  )
+  }, [authReady, status, secret, fail])
 
   const exit = useCallback(() => {
     sessionStorage.removeItem(KEY)
     setSecret(null)
-    setNotice(null)
     setStatus('none')
+    setNotice(null)
   }, [])
+
+  const dismissNotice = useCallback(() => setNotice(null), [])
 
   const deleteMessages = useCallback(
     async (ids: number[]): Promise<number> => {
@@ -107,21 +89,14 @@ export function useAdmin(authReady: boolean) {
       })
       if (error) throw new Error(error.message)
       if (data === null) {
-        // 그 사이 비밀번호가 변경된 경우
-        expire('비밀번호가 변경되었습니다. 다시 입력하세요.')
-        throw new Error('삭제하지 못했습니다. 비밀번호를 다시 입력하세요.')
+        // 그 사이 서버의 비밀번호 규칙이 바뀐 경우
+        fail('관리자 인증이 만료되었습니다.')
+        throw new Error('삭제하지 못했습니다.')
       }
       return data as number
     },
-    [secret, expire],
+    [secret, fail],
   )
 
-  return {
-    isAdmin: status === 'ok',
-    status,
-    notice,
-    submit,
-    exit,
-    deleteMessages,
-  }
+  return { isAdmin: status === 'ok', status, notice, dismissNotice, exit, deleteMessages }
 }

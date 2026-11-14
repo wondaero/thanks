@@ -1,7 +1,6 @@
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ensureAnonUser, supabase, type Message } from './supabase'
 import { useAdmin } from './admin'
-import { AdminLogin } from './AdminLogin'
 
 const PAGE_SIZE = 50
 /** 맨 위에서 이 거리(px) 안으로 들어오면 이전 글을 미리 불러옴 */
@@ -271,14 +270,13 @@ export default function App() {
           </button>
         </div>
       )}
-      {(admin.status === 'prompt' || admin.status === 'submitting') && (
-        <AdminLogin
-          checking={admin.status === 'submitting'}
-          disabled={!myId}
-          notice={admin.notice}
-          onSubmit={admin.submit}
-          onCancel={admin.exit}
-        />
+      {admin.notice && (
+        <p className="notice">
+          {admin.notice}
+          <button type="button" onClick={admin.dismissNotice} aria-label="닫기">
+            ×
+          </button>
+        </p>
       )}
 
       <div className="list" ref={listRef} onScroll={onScroll}>

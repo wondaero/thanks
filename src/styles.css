@@ -143,48 +143,25 @@ body { background: var(--bg); color: var(--text); }
 .msg--selected .bubble { outline: 2px solid #ef4444; outline-offset: 2px; }
 .meta input[type='checkbox'] { margin: 0; accent-color: #ef4444; }
 
-/* 관리자 로그인 모달 */
-.modal {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: rgb(0 0 0 / 0.45);
-  z-index: 10;
-}
-.modal__panel {
-  width: min(320px, 100%);
+/* 관리자 인증 실패 등 안내 */
+.notice {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  border-radius: 12px;
-  background: var(--panel);
-  border: 1px solid var(--border);
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  color: #ef4444;
+  font-size: 13px;
 }
-.modal__panel h2 { margin: 0; font-size: 16px; }
-.modal__panel input {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-}
-.modal__notice { margin: 0; color: #ef4444; font-size: 13px; }
-.modal__actions { display: flex; justify-content: flex-end; gap: 8px; }
-.modal__actions button {
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text);
-  font: inherit;
+.notice button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
   cursor: pointer;
 }
-.modal__actions button.primary { background: var(--mine); border-color: var(--mine); color: #fff; }
-.modal__actions button:disabled { opacity: 0.5; cursor: default; }
 
 /* 본인 글 삭제 */
 .msg__delete {
